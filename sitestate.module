@@ -1,0 +1,77 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * @todo
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function sitestate_menu() {
+  $items = array();
+
+  $items['admin/settings/sitestate'] = array(
+    'title' => 'Site states',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sitestate_admin_state', 'edit', 3),
+    'access arguments' => array('administer site state'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'sitestate.admin.inc',
+  );
+  $items['admin/settings/sitestate/%sitestate/edit'] = array(
+    'title' => 'Edit site state',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sitestate_edit_state', 'edit', 3),
+    'access arguments' => array('administer site state'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'sitestate.admin.inc',
+  );
+  $items['admin/settings/sitestate/%sitestate/delete'] = array(
+    'title' => 'Delete site state',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sitestate_delete_state', 'edit', 3),
+    'access arguments' => array('administer site state'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'sitestate.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function sitestate_perm() {
+  return array('administer site state', 'apply site state');
+}
+
+/**
+ * Load single sites state.
+ *
+ * @todo
+ */
+function sitestate_load($ssid) {
+  // @todo Do we have to return FALSE for invalid ssid's (e.g. non integers?)
+  return sitestate_state_load_multiple(array($ssid));
+}
+
+/**
+ * Load multiple sites states.
+ *
+ * @param $ssids
+ *   Array of site state ids.
+ * @return array of site state objects.
+ */
+function sitestate_load_multiple($ssids = array()) {
+  static $sitestates = array();
+  if (!$sitestates) {
+    $result = db_query('SELECT * FROM {sitestate} WHERE ssid IN ('. db_placeholders($ssids, 'int') .')');
+    foreach(db_fetch_object($result) as $sitestate) {
+      $sitestates[$sitestate->ssid] = $sitestate;
+    }
+  }
+  return $sitestates;
+}
+
