@@ -17,7 +17,7 @@ function sitestate_admin_state(&$form_state, $sitestate) {
 /**
  * @todo
  */
-function sitestate_edit_state($sitestate) {
+function sitestate_edit_state($sitestate = array()) {
   $form['temp'] = array('#value' => '... edit site states here ...');
   return $form;
 }
