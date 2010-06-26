@@ -10,7 +10,7 @@
  * Site states list page.
  */
 function sitestate_admin_page() {
-  $sitestates = sitestate_load_multiple();
+  $sitestates = sitestate_load_all();
   
   $header = array(t('Name'), t('Description'), array('data' => t('Operations'), 'colspan' => '2'));
   $rows = array();
