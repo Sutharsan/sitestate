@@ -54,7 +54,7 @@ function sitestate_perm() {
  */
 function sitestate_load($ssid) {
   // @todo Do we have to return FALSE for invalid ssid's (e.g. non integers?)
-  return sitestate_load_multiple(array($ssid));
+  return reset(sitestate_load_multiple(array($ssid)));
 }
 
 /**
@@ -75,3 +75,33 @@ function sitestate_load_multiple($ssids = array()) {
   return $sitestates;
 }
 
+/**
+ * Load single sites state including state settings.
+ *
+ * @param $ssid
+ *   Site state id.
+ * @return site state object including state's settings objects.
+ */
+function sitestate_get_sitestate($ssid) {
+  $sitestate = sitestate_load($ssid);
+  $sitestate->settings = sitestate_settings_load($ssid);
+  return $sitestate;
+}
+
+/**
+ * Load setting of a site state.
+ *
+ * @param $ssid
+ *   Site state id.
+ * @return array of site state settings objects.
+ */
+function sitestate_settings_load($ssid) {
+  static $settings = array();
+  if (!$settings) {
+    $result = db_query('SELECT * FROM {sitestate_settings} WHERE ssid = %i', $ssid);
+    foreach(db_fetch_object($result) as $setting) {
+      $settings[$setting->type .':'. $setting->name] = $setting;
+    }
+  }
+  return $settings;
+}
