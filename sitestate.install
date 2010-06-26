@@ -1,0 +1,79 @@
+<?php
+// $Id:$
+
+/**
+ * @file
+ * Install schema for the Site State module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function sitestate_install() {
+  drupal_install_schema('sitestate');
+}
+
+/**
+ * Implementation of hook_schema().
+ *
+ * This hook should return a SchemaAPI array with a full definition of the most
+ * up-to-date version of the module's database tables.
+ */
+function sitestate_schema() {
+  $schema['sitestate'] = array(
+    'description' => t('Stores site state definitions.'),
+    'fields' => array(
+      'ssid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('Unique identifier for the {sitestate}.'),
+      ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('The visible title of the {sitestate}.')
+      ),
+    ),
+    'primary key' => array('ssid'),
+  );
+  $schema['sitestate_settings'] = array(
+    'description' => t('Stores site state settings.'),
+    'fields' => array(
+      'ssid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t('Unique {sitestate}.ssid identifier.'),
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('The type of the setting.')
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('The name of the setting.')
+      ),
+      'value' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+        'description' => t('The value of the variable.'),
+      ),
+    ),
+    'primary key' => array('ssid'),
+    'indexes' => array(
+        'type_name' => array(array('type', 12), 'name'),
+      ),
+    );
+  return $schema;
+}
