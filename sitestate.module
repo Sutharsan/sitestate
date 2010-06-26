@@ -15,7 +15,7 @@ function sitestate_menu() {
   $items['admin/settings/sitestate'] = array(
     'title' => 'Site states',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('sitestate_admin_state', 'edit', 3),
+    'page arguments' => array('sitestate_admin_state'),
     'access arguments' => array('administer site state'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'sitestate.admin.inc',
