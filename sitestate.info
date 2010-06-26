@@ -1,0 +1,4 @@
+; $Id:$
+name = Site state
+description = Provides a way to define and switch between different site states with different enabled modules and settings.
+core = 6.x
