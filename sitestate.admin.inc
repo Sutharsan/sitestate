@@ -55,3 +55,40 @@ function sitestate_delete_state($sitestate) {
   $form['temp'] = array('#value' => '... confirm delete site states here ...');
   return $form;
 }
+
+/**
+ * Apply site state.
+ */
+function sitestate_apply_state($sitestate) {
+  $sitestate = sitestate_get_sitestate($sitestate);
+
+  $enable = array();
+  $disable = array();
+  
+  foreach ($sitestate->settings as $setting) {
+    switch ($setting->type) {
+    
+      case 'variable':
+        variable_set($setting->name, unserialize($setting->value));
+        break;
+        
+      case 'module':
+        if (module_exists($setting->name) != $setting->value) {
+          if ($setting->value == 1) {
+            $enable[] = $setting->name;
+          }
+          else {
+            $disable[] = $setting->name;
+          }
+        }
+        break;
+        
+    }
+  }
+
+  // Enable and disable modules.
+  // @TODO: implement batch api for enabling/disabling modules.
+  module_enable($enable);
+  module_disable($disable);
+  drupal_flush_all_caches();
+}
