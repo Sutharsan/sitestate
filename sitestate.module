@@ -17,23 +17,36 @@ function sitestate_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('sitestate_admin_state', 'edit', 3),
     'access arguments' => array('administer site state'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'sitestate.admin.inc',
+  );
+  $items['admin/settings/sitestate/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/settings/sitestate/add'] = array(
+    'title' => 'Add site state',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sitestate_edit_state'),
+    'access arguments' => array('administer site state'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'sitestate.admin.inc',
   );
   $items['admin/settings/sitestate/%sitestate/edit'] = array(
     'title' => 'Edit site state',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('sitestate_edit_state', 'edit', 3),
+    'page arguments' => array('sitestate_edit_state', 3),
     'access arguments' => array('administer site state'),
-    'type' => MENU_LOCAL_TASK,
+    'type' => MENU_CALLBACK,
     'file' => 'sitestate.admin.inc',
   );
   $items['admin/settings/sitestate/%sitestate/delete'] = array(
     'title' => 'Delete site state',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('sitestate_delete_state', 'edit', 3),
+    'page arguments' => array('sitestate_delete_state', 3),
     'access arguments' => array('administer site state'),
-    'type' => MENU_LOCAL_TASK,
+    'type' => MENU_CALLBACK,
     'file' => 'sitestate.admin.inc',
   );
 
