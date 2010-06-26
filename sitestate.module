@@ -59,6 +59,40 @@ function sitestate_perm() {
   return array('administer site state', 'apply site state');
 }
 
+function sitestate_form_system_site_maintenance_settings_alter(&$form, &$form_state) {
+  $options = array();
+  $states = sitestate_load_all();
+  foreach ($states as $state) {
+    $options[$state->ssid] = $state->title;
+  }
+  $form['sitestate_selected_state'] = array(
+    '#type' => 'radios',
+    '#title' => t('Site state'),
+    '#default_value' => variable_get('sitestate_selected_state', 1),
+    '#options' => $options  ,
+    '#weight' => -10,
+    '#description' => t('TODO what does this do.'),
+  );
+  if ($differences = sitestate_get_state_overrides()) {
+    $form['warning'] = array(
+      '#value' => t('TODO This message appears if the selected state does not match the current state.'),
+    );
+    print_r($differences);
+  }
+  
+  $form['override'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Override'),
+    '#weight' => -9,
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['override']['site_offline'] = $form['site_offline'];
+  unset($form['site_offline']);
+  unset($form['site_offline_message']);
+dpm($form);
+}
+
 /**
  * Load single sites state.
  *
@@ -120,4 +154,66 @@ function sitestate_settings_load($ssid) {
     }
   }
   return $settings;
+}
+
+/**
+ * Check if the current state maches the last selected state.
+ *
+ * @return found differences
+ *   Array of found differences
+ *   FALSE if no difference are found.
+ */
+//@todo In what file to place this function
+function sitestate_check_state() {
+  $differences = array();
+  
+  $selected_state = sitestate_settings_load(variable_get('sitestate_selected_state', 1));
+  $current_state = sitestate_get_current_state(array_keys($selected_state));
+  foreach ($selected_state as $key => $selected) {
+    if (isset($current_state[$key])) {
+      if ($selected == $current_state[$key]) {
+        list($type, $name) = explode($key);
+        $differences[] = array(
+          'type' => $type,
+          'name' => $name,
+          'value' => $current_state[$key],
+        );
+      }
+    }
+    else {
+      $differences[] = array(
+        'type' => $type,
+        'name' => $name,
+        'value' => t('Undefined'),
+      );
+    }
+  }
+  return empty($differences) ? FALSE : $differences;
+}
+
+/**
+ * Return the current state of specified type-name pairs
+ *
+ * @todo
+ */
+//@todo In what file to place this function
+function sitestate_get_current_state($keys) {
+  global $conf;
+  $current_state = array();
+
+  foreach ($keys as $key) {
+    list($type, $name) = explode($key);
+    switch ($type) {
+      case 'module':
+        $current_state[$key] = module_exists($name);
+        break;
+      case 'variable':
+        // We don't use the variable_get() here to avoid the variable_get default.
+        if (isset($conf[$name])) {
+          $current_state[$key] = $conf[$name];
+        }
+        break;
+    }
+  }
+  return $current_state;
 }
