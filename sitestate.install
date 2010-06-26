@@ -34,7 +34,13 @@ function sitestate_schema() {
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
-        'description' => t('The visible title of the {sitestate}.')
+        'description' => t('The visible title of the {sitestate}.'),
+      ),
+      'description'    => array(
+        'description' => 'A brief description of this type.',
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'medium',
       ),
     ),
     'primary key' => array('ssid'),
@@ -54,14 +60,14 @@ function sitestate_schema() {
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
-        'description' => t('The type of the setting.')
+        'description' => t('The type of the setting.'),
       ),
       'name' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
-        'description' => t('The name of the setting.')
+        'description' => t('The name of the setting.'),
       ),
       'value' => array(
         'type' => 'text',
@@ -70,9 +76,8 @@ function sitestate_schema() {
         'description' => t('The value of the variable.'),
       ),
     ),
-    'primary key' => array('ssid'),
     'indexes' => array(
-        'type_name' => array(array('type', 12), 'name'),
+        'ssid_type_name' => array('ssid', array('type', 12), 'name'),
       ),
     );
   return $schema;
