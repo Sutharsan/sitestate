@@ -79,9 +79,9 @@ function sitestate_load($ssid) {
  */
 function sitestate_load_multiple($ssids = array()) {
   static $sitestates = array();
-  if (!$sitestates) {
-    $result = db_query('SELECT * FROM {sitestate} WHERE ssid IN ('. db_placeholders($ssids, 'int') .')');
-    foreach(db_fetch_object($result) as $sitestate) {
+  if (empty($sitestates)) {
+    $result = db_queryd('SELECT * FROM {sitestate} WHERE ssid IN ('. db_placeholders($ssids, 'int') .')', $ssids);
+    while($sitestate = db_fetch_object($result)) {
       $sitestates[$sitestate->ssid] = $sitestate;
     }
   }
@@ -111,8 +111,8 @@ function sitestate_get_sitestate($ssid) {
 function sitestate_settings_load($ssid) {
   static $settings = array();
   if (!$settings) {
-    $result = db_query('SELECT * FROM {sitestate_settings} WHERE ssid = %i', $ssid);
-    foreach(db_fetch_object($result) as $setting) {
+    $result = db_query('SELECT * FROM {sitestate_settings} WHERE ssid = %d', $ssid);
+    while($setting = db_fetch_object($result)) {
       $settings[$setting->type .':'. $setting->name] = $setting;
     }
   }
