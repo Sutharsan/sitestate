@@ -48,7 +48,13 @@ function sitestate_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'sitestate.admin.inc',
   );
-
+  $items['admin/settings/sitestate/modules'] = array(
+    'title' => 'Module autocomplete',
+    'page callback' => 'sitestate_module_autocomplete',
+    'access arguments' => array('administer site state'),
+    'type' => MENU_CALLBACK,
+    'file' => 'sitestate.admin.inc',
+  );
   return $items;
 }
 
