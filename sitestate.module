@@ -77,26 +77,40 @@ function sitestate_form_system_site_maintenance_settings_alter(&$form, &$form_st
     '#default_value' => variable_get('sitestate_selected_state', 1),
     '#options' => $options  ,
     '#weight' => -10,
-    '#description' => t('TODO what does this do.'),
+    '#description' => t('Your site will be set in the selected state.'),
   );
-  if ($differences = sitestate_get_state_overrides()) {
+  $differences = sitestate_check_state();
+  // @todo Rebuilt as a themable message.
+  //       Use a user friendly differences format.
+  if ($differences !== TRUE) {
     $form['warning'] = array(
-      '#value' => t('TODO This message appears if the selected state does not match the current state.'),
+      '#value' => t('<strong>The current state does not match the selected state.</strong> Some settings may have been altered manually.') .'<br />'. t('Current state(s): @differences', array('@differences' => print_r($differences, 1))),
+      '#weight' => -9,
     );
-    print_r($differences);
   }
   
   $form['override'] = array(
     '#type' => 'fieldset',
     '#title' => t('Override'),
-    '#weight' => -9,
+    '#weight' => -5,
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
   $form['override']['site_offline'] = $form['site_offline'];
+  $form['override']['site_offline']['#description'] = t('Override the online/off-line status of the above selected site state.') .'<br />'. $form['site_offline']['#description'];
+  $form['override']['site_offline']['#title'] = t('Online state');
   unset($form['site_offline']);
   unset($form['site_offline_message']);
-dpm($form);
+  
+  $form['#submit'][] = 'sitestate_site_maintenance_submit';
+}
+
+/**
+ * Site maintenance form custom submit handler.
+ */
+function sitestate_site_maintenance_submit($form, &$form_state) {
+  module_load_include('inc', 'sitestate', 'sitestate.admin');
+  sitestate_apply_state($form_state['values']['sitestate_selected_state']);
 }
 
 /**
@@ -145,15 +159,35 @@ function sitestate_get_sitestate($ssid) {
 }
 
 /**
+ * Gets site state settings form database and performs nesscecary data conversion.
+ */
+function sitestate_get_settings($ssid, $reset = FALSE) {
+  $settings = array();
+  $raw_settings = sitestate_settings_load($ssid, $reset);
+  foreach ($raw_settings as $key => $raw_setting) {
+    $setting = $raw_setting;
+    switch ($raw_setting->type) {
+      case 'variable':
+        $setting->value = unserialize($raw_setting->value);
+        break;
+      case 'module':
+        break;
+    }
+    $settings[$key] = $setting;
+  }
+  return $settings;
+}
+
+/**
  * Load setting of a site state.
  *
  * @param $ssid
  *   Site state id.
  * @return array of site state settings objects.
  */
-function sitestate_settings_load($ssid) {
+function sitestate_settings_load($ssid, $reset = FALSE) {
   static $settings = array();
-  if (!$settings) {
+  if (!$settings || $reset) {
     $result = db_query('SELECT * FROM {sitestate_settings} WHERE ssid = %d', $ssid);
     while ($setting = db_fetch_object($result)) {
       $settings[$setting->type .':'. $setting->name] = $setting;
@@ -167,34 +201,33 @@ function sitestate_settings_load($ssid) {
  *
  * @return found differences
  *   Array of found differences
- *   FALSE if no difference are found.
+ *   TRUE if no difference are found.
  */
 //@todo In what file to place this function
 function sitestate_check_state() {
   $differences = array();
   
-  $selected_state = sitestate_settings_load(variable_get('sitestate_selected_state', 1));
-  $current_state = sitestate_get_current_state(array_keys($selected_state));
-  foreach ($selected_state as $key => $selected) {
-    if (isset($current_state[$key])) {
-      if ($selected == $current_state[$key]) {
-        list($type, $name) = explode($key);
+  $selected_states = sitestate_get_settings(variable_get('sitestate_selected_state', 1), TRUE);
+  $current_states = sitestate_get_current_states();
+  foreach ($selected_states as $key => $selected) {
+    if (isset($current_states[$key])) {
+      if ($selected->value != $current_states[$key]->value) {
         $differences[] = array(
-          'type' => $type,
-          'name' => $name,
-          'value' => $current_state[$key],
+          'type' => $selected->type,
+          'name' => $selected->name,
+          'value' => $current_states[$key]->value,
         );
       }
     }
     else {
       $differences[] = array(
-        'type' => $type,
-        'name' => $name,
+        'type' => $selected->type,
+        'name' => $selected->name,
         'value' => t('Undefined'),
       );
     }
   }
-  return empty($differences) ? FALSE : $differences;
+  return empty($differences) ? TRUE : $differences;
 }
 
 /**
@@ -203,23 +236,34 @@ function sitestate_check_state() {
  * @todo
  */
 //@todo In what file to place this function
-function sitestate_get_current_state($keys) {
+function sitestate_get_current_states($keys = array()) {
   global $conf;
-  $current_state = array();
+  $current_states = array();
+  
+  // By default we check the current state only those items set in the selected site state.
+  if (empty($keys)) {
+    $keys = array_keys(sitestate_get_settings(variable_get('sitestate_selected_state', 1), TRUE));
+  }
 
   foreach ($keys as $key) {
-    list($type, $name) = explode($key);
+    list($type, $name) = explode(':', $key);
+    $state = new stdClass();
+    $state->ssid = variable_get('sitestate_selected_state', 1);
+    $state->type = $type;
+    $state->name = $name;
     switch ($type) {
       case 'module':
-        $current_state[$key] = module_exists($name);
+        // Convert to a form that maches 
+        $state->value = module_exists($name) ? '1' : '0';
         break;
       case 'variable':
         // We don't use the variable_get() here to avoid the variable_get default.
         if (isset($conf[$name])) {
-          $current_state[$key] = $conf[$name];
+          $state->value = $conf[$name];
         }
         break;
     }
+    $current_states[$key] = $state;
   }
-  return $current_state;
+  return $current_states;
 }

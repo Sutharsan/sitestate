@@ -171,16 +171,14 @@ function sitestate_delete_state($sitestate) {
  * Apply site state.
  */
 function sitestate_apply_state($ssid) {
-  $sitestate = sitestate_get_sitestate($ssid);
-
+  $settings = sitestate_get_settings($ssid);
   $enable = array();
   $disable = array();
-  
-  foreach ($sitestate->settings as $setting) {
+  foreach ($settings as $setting) {
     switch ($setting->type) {
     
       case 'variable':
-        variable_set($setting->name, unserialize($setting->value));
+        variable_set($setting->name, $setting->value);
         break;
         
       case 'module':
@@ -196,9 +194,9 @@ function sitestate_apply_state($ssid) {
         
     }
   }
-
   // Enable and disable modules.
   // @TODO: implement batch api for enabling/disabling modules.
+  // @todo Model this after the Module page submit handling to correctly handle dependencies.
   module_enable($enable);
   module_disable($disable);
   drupal_flush_all_caches();
