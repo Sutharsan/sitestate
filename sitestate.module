@@ -7,6 +7,12 @@
  */
 
 /**
+ * By default we don not override the site offline state.
+ * The third radiobutton has the value of 2
+ */
+define(SITESTATE_NO_OVERRIDE_OFFLINE, 2);
+
+/**
  * Implementation of hook_menu().
  */
 function sitestate_menu() {
@@ -94,10 +100,16 @@ function sitestate_form_system_site_maintenance_settings_alter(&$form, &$form_st
     '#title' => t('Override'),
     '#weight' => -5,
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => variable_get('sitestate_override_site_offline', SITESTATE_NO_OVERRIDE_OFFLINE) == SITESTATE_NO_OVERRIDE_OFFLINE,
   );
-  $form['override']['site_offline'] = $form['site_offline'];
-  $form['override']['site_offline']['#description'] = t('Override the online/off-line status of the above selected site state.') .'<br />'. $form['site_offline']['#description'];
+  $form['override']['sitestate_override_site_offline'] = array(
+    '#type' => 'radios',
+    '#title' => t('Site status'),
+    '#default_value' => variable_get('sitestate_override_site_offline', SITESTATE_NO_OVERRIDE_OFFLINE),
+    '#options' => array(t('Online'), t('Off-line'), t('No override')),
+    '#description' => t('Override the online/off-line status of the above selected site state.') .'<br />'. $form['site_offline']['#description'],
+  );
+  
   $form['override']['site_offline']['#title'] = t('Online state');
   unset($form['site_offline']);
   unset($form['site_offline_message']);
@@ -207,7 +219,7 @@ function sitestate_settings_load($ssid, $reset = FALSE) {
 function sitestate_check_state() {
   $differences = array();
   
-  $selected_states = sitestate_get_settings(variable_get('sitestate_selected_state', 1), TRUE);
+  $selected_states = sitestate_get_settings(variable_get('sitestate_selected_state', 1));
   $current_states = sitestate_get_current_states();
   foreach ($selected_states as $key => $selected) {
     if (isset($current_states[$key])) {
@@ -235,14 +247,15 @@ function sitestate_check_state() {
  *
  * @todo
  */
-//@todo In what file to place this function
+// @todo In what file to place this function
+// @todo rename to sitestate_get_current_settings().
 function sitestate_get_current_states($keys = array()) {
   global $conf;
   $current_states = array();
   
   // By default we check the current state only those items set in the selected site state.
   if (empty($keys)) {
-    $keys = array_keys(sitestate_get_settings(variable_get('sitestate_selected_state', 1), TRUE));
+    $keys = array_keys(sitestate_get_settings(variable_get('sitestate_selected_state', 1)));
   }
 
   foreach ($keys as $key) {

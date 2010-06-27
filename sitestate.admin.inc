@@ -171,7 +171,7 @@ function sitestate_delete_state($sitestate) {
  * Apply site state.
  */
 function sitestate_apply_state($ssid) {
-  $settings = sitestate_get_settings($ssid);
+  $settings = sitestate_get_settings($ssid, TRUE);
   $enable = array();
   $disable = array();
   foreach ($settings as $setting) {
@@ -194,6 +194,12 @@ function sitestate_apply_state($ssid) {
         
     }
   }
+
+  // Override off-line state if required.
+  if (variable_get('sitestate_override_site_offline', SITESTATE_NO_OVERRIDE_OFFLINE) != SITESTATE_NO_OVERRIDE_OFFLINE) {
+    variable_set('site_offline', variable_get('sitestate_override_site_offline', SITESTATE_NO_OVERRIDE_OFFLINE));
+  }
+  
   // Enable and disable modules.
   // @TODO: implement batch api for enabling/disabling modules.
   // @todo Model this after the Module page submit handling to correctly handle dependencies.
