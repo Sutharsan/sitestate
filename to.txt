@@ -1,16 +1,23 @@
-{sitestate_settings}
-  ssid
-  type
-  name
-  value
-  
-Values:
-  Var: 
-    checkbox TRUE: s:1:"1";
-    checkbox FALSE: s:1:"0";
-  Module:
-    Enabled: 1
-    Disabled: 0
+Technical design
+Database
+  {sitestate}
+    ssid
+    title
+    description
+
+  {sitestate_settings}
+    ssid
+    type
+    name
+    value
+    
+  Values:
+    Var: 
+      checkbox TRUE: s:1:"1";
+      checkbox FALSE: s:1:"0";
+    Module:
+      Enabled: 1
+      Disabled: 0
 
 sitestate_settings_load($ssid, $reset)
   Returns:
@@ -49,4 +56,11 @@ sitestate_get_current_state
       object->type
       object->name
       object->value
+  Values:
+    Var: 
+      checkbox TRUE: '1';
+      checkbox FALSE: '0';
+    Module:
+      Enabled: '1'
+      Disabled: '0'
 
