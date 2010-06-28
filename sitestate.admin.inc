@@ -158,6 +158,7 @@ function sitestate_edit_state_submit($form, &$form_state) {
   $sitestate['ssid'] = $form_state['values']['ssid'];
   $sitestate['title'] = $form_state['values']['title'];
   $sitestate['description'] = $form_state['values']['description'];
+  drupal_write_record('sitestate', $sitestate, 'ssid');
   
   foreach ($form_state['values']['modules']['defined'] as $module) {
     unset($module['current']);
