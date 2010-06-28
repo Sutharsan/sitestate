@@ -52,8 +52,20 @@ function sitestate_edit_state(&$form_state, $sitestate = array()) {
       $state_modules[$setting->name] = $setting->value;
     }  
   }
-  
+
   $form['ssid'] = array('#type' => 'value', '#value' => $sitestate->ssid);
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('State name'), 
+    '#default_value' => $sitestate->title,
+    '#required' => TRUE,
+  );
+  $form['description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Description'), 
+    '#default_value' => $sitestate->description,
+  );
 
   $form['modules'] = array(
     '#type' => 'fieldset',
@@ -142,6 +154,11 @@ function sitestate_edit_state_validate($form, &$form_state) {
  */
 function sitestate_edit_state_submit($form, &$form_state) {
   //dsm($form_state);
+  // Save general site state data.
+  $sitestate['ssid'] = $form_state['values']['ssid'];
+  $sitestate['title'] = $form_state['values']['title'];
+  $sitestate['description'] = $form_state['values']['description'];
+  
   foreach ($form_state['values']['modules']['defined'] as $module) {
     unset($module['current']);
     $module['ssid'] = $form_state['values']['ssid'];
