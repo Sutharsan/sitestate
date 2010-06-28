@@ -75,37 +75,39 @@ function sitestate_edit_state(&$form_state, $sitestate = array()) {
     '#collapsed' => FALSE,
     '#tree' => true,
   );
-  
-  foreach ($state_modules as $module => $value) {
-    $form['modules']['defined'][$module] = array(
-      'name' => array(
-        '#type' => 'textfield', 
-        '#maxlength' => 60, 
-        '#autocomplete_path' => 'admin/settings/sitestate/modules', 
-        '#default_value' => $module, 
-      ),
-      'value' => array(
-        '#type' => 'checkbox',
-        '#title' => t('Enabled'),
-        '#default_value' => $value,
-        '#prefix' => '<div>',
-        '#suffix' => '</div>',
-      ),
-      'current' => array(
-        '#type' => 'checkbox',
-        '#title' => t('Current module state'),
-        '#default_value' => module_exists($module),
-        '#prefix' => '<div>',
-        '#suffix' => '</div>',
-        '#disabled' => true,
-      ),
+
+  if (!empty($state_modules)) {
+    foreach ($state_modules as $module => $value) {
+      $form['modules']['defined'][$module] = array(
+        'name' => array(
+          '#type' => 'textfield', 
+          '#maxlength' => 60, 
+          '#autocomplete_path' => 'admin/settings/sitestate/modules', 
+          '#default_value' => $module, 
+        ),
+        'value' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Enabled'),
+          '#default_value' => $value,
+          '#prefix' => '<div>',
+          '#suffix' => '</div>',
+        ),
+        'current' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Current module state'),
+          '#default_value' => module_exists($module),
+          '#prefix' => '<div>',
+          '#suffix' => '</div>',
+          '#disabled' => true,
+        ),
+      );
+    }
+    $form['modules']['more'] = array(
+      '#prefix' => '<div><b>'. t('Add more modules') .'</b>',
+      '#suffix' => '</div>',
     );
-  
   }
-  $form['modules']['more'] = array(
-    '#prefix' => '<div><b>'. t('Add more modules') .'</b>',
-    '#suffix' => '</div>',
-  );
+
   for ( $i = 0; $i < 3; $i++) {
     $form['modules']['more'][$i] = array(
       'name' => array(
