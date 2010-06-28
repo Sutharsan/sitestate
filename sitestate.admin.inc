@@ -161,20 +161,24 @@ function sitestate_edit_state_submit($form, &$form_state) {
   $sitestate['title'] = $form_state['values']['title'];
   $sitestate['description'] = $form_state['values']['description'];
   drupal_write_record('sitestate', $sitestate, 'ssid');
-  
-  foreach ($form_state['values']['modules']['defined'] as $module) {
-    unset($module['current']);
-    $module['ssid'] = $form_state['values']['ssid'];
-    $module['type'] = 'module';
-    //dsm($module);
-    drupal_write_record('sitestate_settings', $module, array('ssid', 'type', 'name'));
-  }
-  foreach ($form_state['values']['modules']['more'] as $module) {
-    if ($module['name']) {
+
+  if (!empty($form_state['values']['modules']['defined'])) {
+    foreach ($form_state['values']['modules']['defined'] as $module) {
+      unset($module['current']);
       $module['ssid'] = $form_state['values']['ssid'];
       $module['type'] = 'module';
       //dsm($module);
-      drupal_write_record('sitestate_settings', $module);
+      drupal_write_record('sitestate_settings', $module, array('ssid', 'type', 'name'));
+    }
+  }
+  if (!empty($form_state['values']['modules']['more'])) {
+    foreach ($form_state['values']['modules']['more'] as $module) {
+      if ($module['name']) {
+        $module['ssid'] = $form_state['values']['ssid'];
+        $module['type'] = 'module';
+        //dsm($module);
+        drupal_write_record('sitestate_settings', $module);
+      }
     }
   }
 }
