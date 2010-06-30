@@ -5,7 +5,7 @@
  * @file
  * @todo
  */
-
+ 
 /**
  * By default we don not override the site offline state.
  * The third radiobutton has the value of 2
@@ -66,12 +66,36 @@ function sitestate_menu() {
 
 /**
  * Implementation of hook_perm().
+ *
+ * Permission 'administer site state':
+ *   Administer the site state name, off-line text, administer state settings.
+ * Permission 'apply site state':
+ *   Select and activate a site state, can override the on-line/offline state.
  */
 function sitestate_perm() {
   return array('administer site state', 'apply site state');
 }
 
+/**
+ * Alter the site maintenance form.
+ *
+ * The existing radios for on-line/offline selection are removed and replaced
+ * by radios to select the configurable site states. The existing off-line
+ * message is removed too.
+ * A warning text is included to notify the admin that the selected site state
+ * has been overridden (probably by the admin).
+ * The form has an override section to enable manual override of the site
+ * on-line/offline state. By default no override is applied.
+ */
 function sitestate_form_system_site_maintenance_settings_alter(&$form, &$form_state) {
+  // Only users with permission 'apply site state' will see the altered page.
+  // Users without this permission (and with 'administer site configuration' permission)
+  // can still change the site on-line/offline state.
+  if (!user_access('apply site state')) {
+    return;
+  }
+
+  // Add radios for site state selection.
   $options = array();
   $states = sitestate_load_all();
   foreach ($states as $state) {
@@ -87,14 +111,15 @@ function sitestate_form_system_site_maintenance_settings_alter(&$form, &$form_st
   );
   $differences = sitestate_check_state();
   // @todo Rebuilt as a themable message.
-  //       Use a user friendly differences format.
+  // @todo Use a user friendly format to present the differences.
   if ($differences !== TRUE) {
     $form['warning'] = array(
       '#value' => t('<strong>The current state does not match the selected state.</strong> Some settings may have been altered manually.') .'<br />'. t('Current state(s): @differences', array('@differences' => print_r($differences, 1))),
       '#weight' => -9,
     );
   }
-  
+
+  // Add fieldset for on-line/offline override.
   $form['override'] = array(
     '#type' => 'fieldset',
     '#title' => t('Override'),
@@ -109,51 +134,61 @@ function sitestate_form_system_site_maintenance_settings_alter(&$form, &$form_st
     '#options' => array(t('Online'), t('Off-line'), t('No override')),
     '#description' => t('Override the online/off-line status of the above selected site state.') .'<br />'. $form['site_offline']['#description'],
   );
-  
-  $form['override']['site_offline']['#title'] = t('Online state');
+
+  // Remove the original on-line/offline radios and site offline message.
   unset($form['site_offline']);
   unset($form['site_offline_message']);
-  
+
+  // Custom submit handler to handle the switching of states.
   $form['#submit'][] = 'sitestate_site_maintenance_submit';
 }
 
 /**
  * Site maintenance form custom submit handler.
+ *
+ * Apply selected site state.
  */
 function sitestate_site_maintenance_submit($form, &$form_state) {
+//dpm($form); dpm($form_state);
+  $state_name = $form['sitestate_selected_state']['#options'][$form_state['values']['sitestate_selected_state']];
   module_load_include('inc', 'sitestate', 'sitestate.admin');
   sitestate_apply_state($form_state['values']['sitestate_selected_state']);
+  drupal_set_message(t('State %state was applied.', array('%state' => $state_name)));
 }
 
 /**
- * Load single sites state.
+ * Load single sites state object from the database.
  *
- * @todo
+ * @param $ssid
+ *   Site state id.
+ * @return site state object.
  */
 function sitestate_load($ssid) {
   $sitestate = array();
   if (!isset($sitestate[$ssid])) {
     $result = db_query('SELECT * FROM {sitestate} WHERE ssid = %d', $ssid);
-    $sitestate = db_fetch_object($result);
+    $sitestate[$ssid] = db_fetch_object($result);
   }
-  return $sitestate;
+  return $sitestate[$ssid];
 }
 
 /**
- * Load all sites states.
+ * Load all sites state objects from the database.
  *
- * @param $ssids
- *   Array of site state ids.
- * @return array of site state objects.
+ * @return array of site state objects keyed by ssid.
  */
 function sitestate_load_all() {
   static $sitestates = array();
+
+  // Load site state records from the database and convert to an array of objects.
+  // The array is keyed by ssid.
   if (empty($sitestates)) {
     $result = db_query('SELECT * FROM {sitestate}');
     while ($sitestate = db_fetch_object($result)) {
       $sitestates[$sitestate->ssid] = $sitestate;
     }
   }
+
   return $sitestates;
 }
 
@@ -165,28 +200,48 @@ function sitestate_load_all() {
  * @return site state object including state's settings objects.
  */
 function sitestate_get_sitestate($ssid) {
+  // Load the site state object.
   $sitestate = sitestate_load($ssid);
+
+  // Add the settings object to it.
   $sitestate->settings = sitestate_settings_load($ssid);
+dpm($sitestate);
+
   return $sitestate;
 }
 
 /**
  * Gets site state settings form database and performs nesscecary data conversion.
+ * 
+ * @param $ssid
+ *   Site state id.
+ * @param $reset
+ *   Reset static cache.
+ * @return site state settings object with converted values.
  */
+// @todo: Make data conversion pluggable.
 function sitestate_get_settings($ssid, $reset = FALSE) {
   $settings = array();
-  $raw_settings = sitestate_settings_load($ssid, $reset);
-  foreach ($raw_settings as $key => $raw_setting) {
-    $setting = $raw_setting;
-    switch ($raw_setting->type) {
-      case 'variable':
-        $setting->value = unserialize($raw_setting->value);
-        break;
-      case 'module':
-        break;
+
+  // Load raw data from database.
+  $data = sitestate_settings_load($ssid, $reset);
+
+  // Convert the dataformat if required.
+  if (!empty($data)) {
+    foreach ($data as $key => $setting) {
+      $settings[$key] = drupal_clone($setting);
+      switch ($setting->type) {
+        case 'variable':
+          // Variables are serialized. We need to unserialize to get a usable value.
+          $settings[$key]->value = unserialize($setting->value);
+          break;
+        case 'module':
+          // No conversion required
+          break;
+      }
     }
-    $settings[$key] = $setting;
   }
+
   return $settings;
 }
 
@@ -195,88 +250,114 @@ function sitestate_get_settings($ssid, $reset = FALSE) {
  *
  * @param $ssid
  *   Site state id.
- * @return array of site state settings objects.
+ * @return array of site state settings objects (keyed by ssid).
  */
 function sitestate_settings_load($ssid, $reset = FALSE) {
   static $settings = array();
-  if (!$settings || $reset) {
+  static $test = array();
+
+  if (!isset($settings[$ssid]) || $reset) {
     $result = db_query('SELECT * FROM {sitestate_settings} WHERE ssid = %d', $ssid);
     while ($setting = db_fetch_object($result)) {
-      $settings[$setting->type .':'. $setting->name] = $setting;
+      $settings[$ssid][$setting->type .':'. $setting->name] = $setting;
+      $test[$ssid][$setting->type .':'. $setting->name] = clone($setting);
+      $setting = NULL;
     }
   }
-  return $settings;
+
+  return $settings[$ssid];
 }
 
 /**
  * Check if the current state maches the last selected state.
  *
  * @return found differences
- *   Array of found differences
+ *   Array of differences.
  *   TRUE if no difference are found.
  */
 //@todo In what file to place this function
 function sitestate_check_state() {
   $differences = array();
-  
+
+$selected_states = sitestate_get_settings(variable_get('sitestate_selected_state', 1));
+
+  // Get default value of items in the selected state and current values of these items.
   $selected_states = sitestate_get_settings(variable_get('sitestate_selected_state', 1));
-  $current_states = sitestate_get_current_states();
-  foreach ($selected_states as $key => $selected) {
-    if (isset($current_states[$key])) {
-      if ($selected->value != $current_states[$key]->value) {
+  $current_states = sitestate_get_current_settings();
+
+  // Compare default and current values.
+  if ($selected_states) {
+    foreach ($selected_states as $key => $selected) {
+      if (isset($current_states[$key]) && isset ($current_states[$key]->value)) {
+        if ($selected->value != $current_states[$key]->value) {
+          $differences[] = array(
+            'type' => $selected->type,
+            'name' => $selected->name,
+            'value' => $current_states[$key]->value,
+          );
+        }
+      }
+      else {
         $differences[] = array(
           'type' => $selected->type,
           'name' => $selected->name,
-          'value' => $current_states[$key]->value,
+          'value' => t('Undefined'),
         );
       }
     }
-    else {
-      $differences[] = array(
-        'type' => $selected->type,
-        'name' => $selected->name,
-        'value' => t('Undefined'),
-      );
-    }
   }
+
   return empty($differences) ? TRUE : $differences;
 }
 
 /**
- * Return the current state of specified type-name pairs
+ * Get the values of entities set.
  *
- * @todo
+ * Each site state has a number of selected entities (modules, variables, etc)
+ * which are manipulated when the state is activated. But the site admin may
+ * change these states (e.g. enable a disabled module). To be able to detect the
+ * difference between the value of the current setting and the value intended by
+ * the selected state, this function will collect the current state of all
+ * entities included in the current state.
+ * @see sitestate_check_state
+ *
+ * @return array of values keyed by type:name pairs.
  */
 // @todo In what file to place this function
-// @todo rename to sitestate_get_current_settings().
-function sitestate_get_current_states($keys = array()) {
+function sitestate_get_current_settings() {
   global $conf;
   $current_states = array();
   
-  // By default we check the current state only those items set in the selected site state.
-  if (empty($keys)) {
-    $keys = array_keys(sitestate_get_settings(variable_get('sitestate_selected_state', 1)));
+  // Get the type:name keys of the current state. Only the value of the items
+  // included in the current site state will be collected.
+  $settings = sitestate_get_settings(variable_get('sitestate_selected_state', 1));
+  if ($settings) {
+    $keys = array_keys($settings);
+  
+    // Build an object of each item. The object has the same structure as
+    // the settings object we retrieve from the database.
+    foreach ($keys as $key) {
+      list($type, $name) = explode(':', $key);
+      $state = new stdClass();
+      $state->ssid = variable_get('sitestate_selected_state', 1);
+      $state->type = $type;
+      $state->name = $name;
+      // @todo make this pluggable.
+      switch ($type) {
+        case 'module':
+          // Convert to a form that maches 
+          $state->value = module_exists($name) ? '1' : '0';
+          break;
+        case 'variable':
+          // We don't use the variable_get() here to avoid the variable_get default value.
+          if (isset($conf[$name])) {
+            $state->value = $conf[$name];
+          }
+          break;
+      }
+      $current_states[$key] = $state;
+    }
   }
 
-  foreach ($keys as $key) {
-    list($type, $name) = explode(':', $key);
-    $state = new stdClass();
-    $state->ssid = variable_get('sitestate_selected_state', 1);
-    $state->type = $type;
-    $state->name = $name;
-    switch ($type) {
-      case 'module':
-        // Convert to a form that maches 
-        $state->value = module_exists($name) ? '1' : '0';
-        break;
-      case 'variable':
-        // We don't use the variable_get() here to avoid the variable_get default.
-        if (isset($conf[$name])) {
-          $state->value = $conf[$name];
-        }
-        break;
-    }
-    $current_states[$key] = $state;
-  }
   return $current_states;
 }

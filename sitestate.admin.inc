@@ -198,6 +198,12 @@ function sitestate_apply_state($ssid) {
   $settings = sitestate_get_settings($ssid, TRUE);
   $enable = array();
   $disable = array();
+
+  // If nothing is set, let's get out of here ;)
+  if (empty($settings)) {
+    return;
+  }
+
   foreach ($settings as $setting) {
     switch ($setting->type) {
     
